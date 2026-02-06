@@ -1,0 +1,16 @@
+{
+  "author_name": "",
+  "project_name": "",
+  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}",
+  "plugin_description": "My Amazing Maya Plugin",
+  "plugin_version": "0.1.0",
+  "maya_version": "2026",
+  "devkit_directory": ".libraries/maya_dev_kit",
+  "open_source_license": [
+      "MIT",
+      "BSD",
+      "GPLv3",
+      "Apache Software License 2.0",
+      "Not open source"
+    ]
+}

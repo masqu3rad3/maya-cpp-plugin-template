@@ -1,0 +1,249 @@
+#{% raw %}
+name: release
+
+on:
+  workflow_dispatch:
+#  push:
+#    branches: [ main ]
+#    tags-ignore:
+#      - v*
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  # -------
+  # Windows
+  # -------
+
+  maya-win:
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+       include:
+          - maya: "2022"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2022/Autodesk_Maya_2022_5_Update_DEVKIT_Windows.zip"
+          - maya: "2023"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2023/Autodesk_Maya_2023_3_Update_DEVKIT_Windows.zip"
+          - maya: "2024"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2024/Autodesk_Maya_2024_2_Update_DEVKIT_Windows.zip"
+          - maya: "2025"
+            devkit: "https://autodesk-adn-transfer.s3.us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2025/Autodesk_Maya_2025_3_Update_DEVKIT_Windows.zip"
+          - maya: "2026"
+            devkit: "https://autodesk-adn-transfer.s3.us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2026/Autodesk_Maya_2026_1_Update_DEVKIT_Windows.zip"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Install devkit
+        run: |
+          Write-Host "Downloading Devkit: ${{matrix.devkit}}..."
+          Invoke-WebRequest -Uri ${{matrix.devkit}} -OutFile "$pwd/devkit.zip"
+          Write-Host "Extracting devkit.zip.."
+          Expand-Archive -LiteralPath devkit.zip -DestinationPath $pwd
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DMAYA_VERSION="${{matrix.maya}}" -DMAYA_DEVKIT_ROOT="$pwd/devkitBase"
+
+      - name: Build
+        run: cmake --build build --config ${{env.BUILD_TYPE}}
+
+      - name: Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{matrix.maya}}
+          path: build/${{env.BUILD_TYPE}}/{% endraw %}{{ cookiecutter.project_slug }}{% raw %}.mll
+
+  # -----
+  # Linux
+  # -----
+
+  maya-linux-old:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+       include:
+          - maya: "2022"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2022/Autodesk_Maya_2022_5_Update_DEVKIT_Linux.tgz"
+          - maya: "2023"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2023/Autodesk_Maya_2023_3_Update_DEVKIT_Linux.tgz"
+          - maya: "2024"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2024/Autodesk_Maya_2024_2_Update_DEVKIT_Linux.tgz"
+          - maya: "2025"
+            devkit: "https://autodesk-adn-transfer.s3.us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2025/Autodesk_Maya_2025_3_Update_DEVKIT_Linux.tgz"
+          - maya: "2026"
+            devkit: "https://autodesk-adn-transfer.s3.us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2026/Autodesk_Maya_2026_1_Update_DEVKIT_Linux.tgz"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Install GCC 9
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-9 g++-9
+          
+          # Set GCC 9 as default
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 90
+
+      - name: Install OpenGL development headers
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev xorg-dev
+
+      - name: Install devkit
+        run: |
+          echo "Downloading Devkit: ${{matrix.devkit}}..."
+          curl -o devkit.tgz ${{matrix.devkit}}
+          echo "Extracting devkit.tgz..."
+          tar -xzf devkit.tgz
+          echo "Devkit extracted"
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DMAYA_VERSION=${{matrix.maya}} -DMAYA_DEVKIT_ROOT="$PWD/devkitBase" -DCMAKE_C_COMPILER=/usr/bin/gcc-9 -DCMAKE_CXX_COMPILER=/usr/bin/g++-9
+
+      - name: Build
+        run: cmake --build build --config ${{env.BUILD_TYPE}}
+
+      - name: Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-gcc9-${{matrix.maya}}
+          path: build/${{env.BUILD_TYPE}}/{% endraw %}{{ cookiecutter.project_slug }}{% raw %}.so
+
+# --- LATEST Linux builds (default toolchain) ---
+  maya-linux-latest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+       include:
+          - maya: "2022"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2022/Autodesk_Maya_2022_5_Update_DEVKIT_Linux.tgz"
+          - maya: "2023"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2023/Autodesk_Maya_2023_3_Update_DEVKIT_Linux.tgz"
+          - maya: "2024"
+            devkit: "https://autodesk-adn-transfer.s3-us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2024/Autodesk_Maya_2024_2_Update_DEVKIT_Linux.tgz"
+          - maya: "2025"
+            devkit: "https://autodesk-adn-transfer.s3.us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2025/Autodesk_Maya_2025_3_Update_DEVKIT_Linux.tgz"
+          - maya: "2026"
+            devkit: "https://autodesk-adn-transfer.s3.us-west-2.amazonaws.com/ADN+Extranet/M%26E/Maya/devkit+2026/Autodesk_Maya_2026_1_Update_DEVKIT_Linux.tgz"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Install OpenGL development headers
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev xorg-dev
+
+      - name: Install devkit
+        run: |
+          echo "Downloading Devkit: ${{matrix.devkit}}..."
+          curl -o devkit.tgz ${{matrix.devkit}}
+          echo "Extracting devkit.tgz..."
+          tar -xzf devkit.tgz
+          echo "Devkit extracted"
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DMAYA_VERSION=${{matrix.maya}} -DMAYA_DEVKIT_ROOT="$PWD/devkitBase"
+
+      - name: Build
+        run: cmake --build build --config ${{env.BUILD_TYPE}}
+
+      - name: Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{matrix.maya}}
+          path: build/${{env.BUILD_TYPE}}/{% endraw %}{{ cookiecutter.project_slug }}{% raw %}.so
+
+
+# --------
+# Shipping
+# --------
+
+  upload_release:
+    name: Upload release
+    needs: [maya-win, maya-linux-latest, maya-linux-old]
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Read version
+        id: get_version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_ENV
+
+      - name: Use version
+        run: echo "Releasing version ${{ env.version }}"
+
+      - name: Check if Release Tag Exists
+        id: check_tag
+        run: |
+          git fetch --tags
+          if git rev-parse "v${{ env.version }}" >/dev/null 2>&1; then
+            echo "Error: Tag v${{ env.version }} already exists."
+            exit 1
+          fi
+        shell: bash
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: modules/{% endraw %}{{ cookiecutter.project_slug }}/plugins
+
+      - name: Copy scripts to modules/scripts
+        run: |
+          mkdir -p modules/{{ cookiecutter.project_slug }}/scripts
+          cp -r scripts/* modules/{{ cookiecutter.project_slug }}/scripts/
+          cp VERSION modules/{{ cookiecutter.project_slug }}/
+
+      # --------------------------
+      # Build Sphinx Documentation
+      # --------------------------
+      - name: Install Sphinx
+        run: |
+          python -m pip install --upgrade pip
+          pip install sphinx furo
+
+      - name: Build Docs
+        run: |
+          cd docs
+          make html
+          mkdir -p ../modules/{{ cookiecutter.project_slug }}/docs/build/html
+          cp -r build/html/* ../modules/{{ cookiecutter.project_slug }}/docs/build/html/
+
+      # -----------------------
+      # 📦 Package and Release
+      # -----------------------
+      - name: Create distribution
+        run: |
+          cp package/{{ cookiecutter.project_slug }}.mod modules/
+          zip -r {{ cookiecutter.project_slug }}{% raw %}-${{ env.version }}.zip modules/{% endraw %}
+          zip {{ cookiecutter.project_slug }}{% raw %}-${{ env.version }}.zip LICENSE RELEASE_NOTES.md{% endraw %}
+          zip -j {{ cookiecutter.project_slug }}{% raw %}-${{ env.version }}.zip package/dragAndDropMe.py package/index.html{% endraw %}
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: |
+            {{ cookiecutter.project_slug }}{% raw %}-${{ env.version }}.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ env.version }}
+          name: v${{ env.version }}{% endraw %}

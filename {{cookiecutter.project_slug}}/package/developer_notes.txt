@@ -1,0 +1,26 @@
+dragAndDropMe.py and index.html are part of the release package.
+They assume a directory structure as follows:
+release_package/
+    └───modules
+        └───<module_name>
+            ├───docs
+            │   └───build
+            │       └───html
+            │           └───index.html
+            ├───plugins
+            └───scripts
+
+To compile the plugin:
+
+Make sure the Maya Devkit is downloaded and available on your system.
+
+Dependencies:
+- CMake
+- A C++ compiler compatible with your version of Maya
+
+Example CMake commands for Windows:
+Set the path to your Maya Devkit accordingly. E.g
+set MAYA_DEVKIT_ROOT=D:/dev/maya_devkit/2026/devkitBase
+
+cmake -B build -DMAYA_VERSION=2026 -DCMAKE_BUILD_TYPE=Release -DMAYA_DEVKIT_ROOT="D:/dev/maya_devkit/2026/devkitBase"
+cmake --build build --config Release

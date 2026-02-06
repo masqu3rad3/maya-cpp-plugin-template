@@ -1,0 +1,83 @@
+#{% raw %}
+# This workflow will install Python dependencies and run tests
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Maya Integration Tests (Linux)
+
+# we keep it manual for now
+on:
+  workflow_dispatch:
+#  push:
+#    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  maya:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+       include:
+         - maya: "2024"
+         - maya: "2025"
+         - maya: "2026"
+
+    container: mottosso/maya:${{ matrix.maya }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: pip install
+        run: |
+          wget https://bootstrap.pypa.io/pip/get-pip.py
+          mayapy get-pip.py --user --no-cache-dir \
+            --index-url http://mirrors.aliyun.com/pypi/simple/ \
+            --trusted-host mirrors.aliyun.com
+          mayapy -m pip install --user --no-cache-dir \
+            --index-url http://mirrors.aliyun.com/pypi/simple/ \
+            --trusted-host mirrors.aliyun.com \
+            coverage==5.5 \
+            -r requirements-dev.txt
+      - name: Run tests with coverage
+        env:
+          XDG_RUNTIME_DIR: /var/tmp/runtime-root
+          MAYA_DISABLE_ADP: 1
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: |
+          mayapy -m coverage run ./tests/integration/invoke.py
+          mayapy -m coverage xml -o coverage.xml
+          mayapy -m coverage report
+
+      # ----------
+      # Alternate:
+      # ----------
+#      - name: Test with pytest
+#        env:
+#          XDG_RUNTIME_DIR: /var/tmp/runtime-root
+#          MAYA_DISABLE_ADP: 1
+#          PYTHONPATH: ${{ github.workspace }}/src
+#        run: |
+#          mayapy ./tests/integration/invoke.py
+
+      # -----------------------------------------------------
+      # Upload coverage artifact (Required for Codecov setup)
+      # -----------------------------------------------------
+
+#      - name: Upload coverage artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: coverage-${{ matrix.maya }}
+#          path: coverage.xml
+#      - name: Upload coverage to Codecov
+#        uses: codecov/codecov-action@v3
+#        with:
+#          files: coverage.xml
+#          flags: maya-${{ matrix.maya }}
+#          fail_ci_if_error: true
+#        env:
+#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+#{% endraw %}
