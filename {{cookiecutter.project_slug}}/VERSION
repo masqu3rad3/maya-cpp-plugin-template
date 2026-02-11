@@ -1,1 +1,1 @@
-{{ cookiecutter.plugin_version }}
+{{ cookiecutter.project_version }}

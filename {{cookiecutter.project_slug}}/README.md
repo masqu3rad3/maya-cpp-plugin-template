@@ -1,6 +1,6 @@
 # {{ cookiecutter.project_name }}
 
-{{ cookiecutter.plugin_description }}
+{{ cookiecutter.project_description }}
 
 {%- if cookiecutter.open_source_license != "Not open source" %}
 

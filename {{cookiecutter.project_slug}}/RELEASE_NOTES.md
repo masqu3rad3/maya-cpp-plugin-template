@@ -1,4 +1,4 @@
 # {{ cookiecutter.project_name }} Release Notes
 
-# {{ cookiecutter.plugin_version }}
+# {{ cookiecutter.project_version }}
 - Initial release.
