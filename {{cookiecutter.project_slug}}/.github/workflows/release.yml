@@ -187,7 +187,7 @@ jobs:
       - name: Copy scripts to modules/scripts
         run: |
           mkdir -p modules/{{ cookiecutter.project_slug }}/scripts
-          cp -r scripts/* modules/{{ cookiecutter.project_slug }}/scripts/
+          cp -r src/scripts/* modules/{{ cookiecutter.project_slug }}/scripts/
           cp VERSION modules/{{ cookiecutter.project_slug }}/
 
       # --------------------------

@@ -8,9 +8,6 @@ DOCS_DIR := docs
 DOCS_BUILD := docs/build/html
 TESTS_DIR := tests
 
-release: ## Build Release using CMake (VERSION=2026)
-build:   ## Build Debug using CMake (VERSION=2026)
-
 # Python executable (Maya)
 MAYAPY ?= mayapy
 
@@ -40,8 +37,8 @@ help: ## Show available commands
 	@echo "Usage: make <target>"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
-		| sort \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
+	 | sort \
+	 | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
 # --------------------------------------------------
 # Documentation
@@ -94,7 +91,7 @@ tests-cov-integration: ## Run integration tests with coverage
 	$(SET_PYTHONPATH) $(MAYAPY) -m coverage run $(TESTS_DIR)/integration/invoke.py
 
 # --------------------------------------------------
-# Build / CMake
+# Build / CMake (kept as explicit cmake targets)
 # --------------------------------------------------
 
 BUILD_DIR := build
@@ -108,22 +105,44 @@ VERSION_ERROR = \
 	exit 1
 endif
 
-.PHONY: build
-build: ## Configure and build Debug (requires VERSION)
+.PHONY: cmake-build
+cmake-build: ## Configure and build Debug (requires VERSION)
 ifndef VERSION
 	$(VERSION_ERROR)
 endif
 	cmake -B $(BUILD_DIR) \
-		-DMAYA_VERSION=$(VERSION) \
-		-DCMAKE_BUILD_TYPE=Debug
+	 -DMAYA_VERSION=$(VERSION) \
+	 -DCMAKE_BUILD_TYPE=Debug
 	cmake --build $(BUILD_DIR) --config Debug
 
-.PHONY: release
-release: ## Configure and build Release (requires VERSION)
+.PHONY: cmake-release
+cmake-release: ## Configure and build Release (requires VERSION)
 ifndef VERSION
 	$(VERSION_ERROR)
 endif
 	cmake -B $(BUILD_DIR) \
-		-DMAYA_VERSION=$(VERSION) \
-		-DCMAKE_BUILD_TYPE=Release
+	 -DMAYA_VERSION=$(VERSION) \
+	 -DCMAKE_BUILD_TYPE=Release
 	cmake --build $(BUILD_DIR) --config Release
+
+# --------------------------------------------------
+# Package-script based build/release/dev (mirror make.bat)
+# --------------------------------------------------
+
+.PHONY: build
+build: ## Build Debug using package script (requires VERSION)
+ifndef VERSION
+	$(error ERROR: VERSION is required. Usage: make build VERSION=2026)
+endif
+	python package/package.py --build $(VERSION)
+
+.PHONY: dev
+dev: ## Dev build via package script (requires VERSION)
+ifndef VERSION
+	$(error ERROR: VERSION is required. Usage: make dev VERSION=2026)
+endif
+	python package/package.py --dev $(VERSION)
+
+.PHONY: release
+release: ## Release build via package script
+	python package/package.py --release

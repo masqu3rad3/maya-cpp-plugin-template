@@ -17,24 +17,29 @@ if "%1"=="tests-cov-integration" goto tests_cov_integration
 
 if "%1"=="build" goto build
 if "%1"=="release" goto release
+if "%1"=="dev" goto dev
 
 echo Unknown command: %1
 echo Run: make help
 echo   build <VERSION>        Debug build via CMake
-echo   release <VERSION>      Release build via CMake
+echo   dev <VERSION>          Debug build via CMake with development settings
+
 exit /b 1
 
 :help
 echo.
 echo Available commands:
-echo   docs
-echo   show-doc
-echo   tests
-echo   tests-unit
-echo   tests-integration
-echo   tests-cov
-echo   tests-cov-unit
-echo   tests-cov-integration
+echo   build <VERSION>             Debug build via CMake
+echo   dev <VERSION>               Debug build via CMake with development settings
+echo   release                     Release build via CMake
+echo   docs                        Build documentation
+echo   show-doc                    Open documentation in browser
+echo   tests                       Run all tests
+echo   tests-unit                  Run unit tests
+echo   tests-integration           Run integration tests
+echo   tests-cov                   Run all tests with coverage
+echo   tests-cov-unit              Run unit tests with coverage
+echo   tests-cov-integration       Run integration tests with coverage
 exit /b 0
 
 :docs
@@ -81,22 +86,16 @@ exit /b 0
 :build
 if "%2"=="" goto missing_version
 
-cmake -B build ^
-  -DMAYA_VERSION=%2 ^
-  -DCMAKE_BUILD_TYPE=Debug
-
-cmake --build build --config Debug
+python package/package.py --build %2
 exit /b 0
 
+:dev
+python package/package.py --dev %2
+exit /b 0
 
 :release
-if "%2"=="" goto missing_version
 
-cmake -B build ^
-  -DMAYA_VERSION=%2 ^
-  -DCMAKE_BUILD_TYPE=Release
-
-cmake --build build --config Release
+python package/package.py --release
 exit /b 0
 
 :missing_version

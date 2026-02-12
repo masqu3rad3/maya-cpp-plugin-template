@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project({{ cookiecutter.project_name }} LANGUAGES CXX)
+project({{ cookiecutter.project_slug }} LANGUAGES CXX)
 
 # # Paths
 if(NOT DEFINED MAYA_DEVKIT_ROOT)
