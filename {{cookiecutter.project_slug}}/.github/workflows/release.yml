@@ -229,7 +229,7 @@ jobs:
       # -----------------------
       - name: Create distribution
         run: |
-          cp package/{{ cookiecutter.project_slug }}.mod modules/
+          python package/package.py --generate-release-mod modules/
           zip -r {{ cookiecutter.project_slug }}{% raw %}-${{ env.version }}.zip modules/{% endraw %}
           zip {{ cookiecutter.project_slug }}{% raw %}-${{ env.version }}.zip LICENSE RELEASE_NOTES.md{% endraw %}
           zip -j {{ cookiecutter.project_slug }}{% raw %}-${{ env.version }}.zip package/dragAndDropMe.py package/index.html{% endraw %}
