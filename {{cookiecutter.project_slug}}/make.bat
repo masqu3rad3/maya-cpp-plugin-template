@@ -18,11 +18,13 @@ if "%1"=="tests-cov-integration" goto tests_cov_integration
 if "%1"=="build" goto build
 if "%1"=="release" goto release
 if "%1"=="dev" goto dev
+if "%1"=="add-plugin" goto add_plugin
 
 echo Unknown command: %1
 echo Run: make help
 echo   build <VERSION>        Debug build via CMake
 echo   dev <VERSION>          Debug build via CMake with development settings
+echo   add-plugin <NAME>      Add a new C++ plugin to the project
 
 exit /b 1
 
@@ -31,8 +33,10 @@ echo.
 echo Available commands:
 echo   build <VERSION>             Debug build via CMake
 echo   dev <VERSION>               Debug build via CMake with development settings
-echo   release                     Release build via CMake
+echo   release <VERSION>           Release build via CMake
+echo   add-plugin <NAME>           Add a new C++ plugin to the project
 echo   docs                        Build documentation
+echo   doctor                      Check environment setup
 echo   show-doc                    Open documentation in browser
 echo   tests                       Run all tests
 echo   tests-unit                  Run unit tests
@@ -105,3 +109,29 @@ echo Usage:
 echo   make.bat build 2026
 echo   make.bat release 2026
 exit /b 1
+
+:add_plugin
+if "%2"=="" goto missing_plugin_name
+python package/package.py --add-plugin %2
+exit /b 0
+
+:missing_plugin_name
+echo.
+echo ERROR: Plugin name is required.
+echo Usage:
+echo   make.bat add-plugin myPlugin
+exit /b 1
+
+:doctor
+echo Checking environment...
+
+where mayapy
+if errorlevel 1 (
+    echo ERROR: mayapy not found in PATH
+    exit /b 1
+)
+
+python --version
+
+echo Environment looks OK.
+exit /b 0

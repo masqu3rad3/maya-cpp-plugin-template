@@ -9,6 +9,7 @@ from pathlib import Path
 import json
 import shutil
 import subprocess
+import time
 
 import inject_utils
 
@@ -34,30 +35,6 @@ OS = platform.system().lower()
 def add_plugin_to_cmakelists(plugin_name: str):
     """Add a subdirectory to the root CMakeLists.txt."""
     inject_utils.add_plugin(plugin_name, ROOT_CMAKELISTS, BLUEPRINT_PATH, REPO_ROOT / "src")
-
-    # if not ROOT_CMAKELISTS.exists():
-    #     raise FileNotFoundError(f"CMakeLists.txt not found at {ROOT_CMAKELISTS}")
-    #
-    # with open(ROOT_CMAKELISTS, "r") as file:
-    #     lines = file.readlines()
-    #
-    # # Check if the subdirectory is already included
-    # include_line = f"add_subdirectory(src/{plugin_name})\n"
-    # if include_line in lines:
-    #     sys.stdout.write(f"{plugin_name} is already included in CMakeLists.txt.\n")
-    # else:
-    #     # Add the subdirectory at the end of the file
-    #     with open(ROOT_CMAKELISTS, "a") as file:
-    #         file.write(f"\n{include_line}")
-    #     sys.stdout.write(f"Added {plugin_name} to CMakeLists.txt.\n")
-    #
-    # # check if the plugin folder is in the src directory
-    # plugin_folder = REPO_ROOT / "src" / plugin_name
-    # if plugin_folder.exists():
-    #     sys.stdout.write(f"{plugin_folder} already exists.\n")
-    # else:
-    #     plugin_folder.mkdir(parents=True, exist_ok=True)
-    #     sys.stdout.write(f"Plugin folder {plugin_folder} created.\n")
 
 def _download_devkit_linux(download_link, devkit_path):
     """Download the devkit for Linux."""
@@ -151,8 +128,6 @@ def dev_deploy(version=None):
         "darwin": ".bundle"
     }
     deploy_root_path = REPO_ROOT / "_dev_deploy"
-    # modules_path = deploy_root_path / "modules"
-    # deploy_path = modules_path / DEFINITIONS["project_slug"]
     plugins_path = deploy_root_path / "plugins"
     plugins_path.mkdir(parents=True, exist_ok=True)
     deploy_versions = [version] if version else DEFINITIONS["target_maya_versions"]
@@ -165,6 +140,19 @@ def dev_deploy(version=None):
         for item in collected_plugins:
             shutil.copy(item, plugin_path / item.name)
             sys.stdout.write(f"Copied {item.name} to deploy folder.\n")
+        if len(deploy_versions) > 1:
+            time.sleep(1.0) # add a small delay between builds to avoid potential file access conflicts
+
+    # Copy python plugins if they exist (flattened - all .py files in same folder)
+    src_python_plugins_path = REPO_ROOT / "src" / "plugins" / "python"
+    if src_python_plugins_path.exists():
+        dev_python_plugins_path = deploy_root_path / "plugins" / "python"
+        dev_python_plugins_path.mkdir(parents=True, exist_ok=True)
+        # Copy each .py file directly (flatten structure)
+        for py_file in src_python_plugins_path.rglob("*.py"):
+            dest_file = dev_python_plugins_path / py_file.name
+            shutil.copy2(py_file, dest_file)
+        sys.stdout.write(f"Copied python plugins to dev deploy folder.\n")
 
     # Maya Modules injections
     user_maya_folder = Path(_get_home_dir()) / "Documents" / "maya"
@@ -200,14 +188,24 @@ def release(version=None):
             shutil.copy(item, plugin_path / item.name)
             sys.stdout.write(f"Copied {item.name} to deploy folder.\n")
 
-    # if there is a scripts folder under the src, copy it under the deploy_path
-    src_scripts_path = REPO_ROOT / "src" / "scripts"
-    if src_scripts_path.exists():
-        deploy_scripts_path = deploy_path / "scripts"
-        if deploy_scripts_path.exists():
-            shutil.rmtree(deploy_scripts_path.as_posix())
-        shutil.copytree(src_scripts_path, deploy_scripts_path)
-        sys.stdout.write(f"Copied scripts to deploy folder.\n")
+    # if there is a tools folder under the src, copy it under the deploy_path
+    src_tools_path = REPO_ROOT / "src" / "tools"
+    if src_tools_path.exists():
+        deploy_tools_path = deploy_path / "tools"
+        if deploy_tools_path.exists():
+            shutil.rmtree(deploy_tools_path.as_posix())
+        shutil.copytree(src_tools_path, deploy_tools_path)
+        sys.stdout.write(f"Copied tools to deploy folder.\n")
+
+    # Copy python plugins (flattened - all .py files in same folder)
+    src_python_plugins_path = REPO_ROOT / "src" / "plugins" / "python"
+    if src_python_plugins_path.exists():
+        deploy_python_plugins_path = deploy_path / "plugins" / "python"
+        deploy_python_plugins_path.mkdir(parents=True, exist_ok=True)
+        for py_file in src_python_plugins_path.rglob("*.py"):
+            dest_file = deploy_python_plugins_path / py_file.name
+            shutil.copy2(py_file, dest_file)
+        sys.stdout.write(f"Copied python plugins to deploy folder.\n")
 
     # create the .mod file
     mod_file_path = modules_path / f"{DEFINITIONS['project_slug']}.mod"
@@ -215,6 +213,16 @@ def release(version=None):
         mod_file.writelines(_generate_release_mod())
     sys.stdout.write(f"Generated .mod file at {mod_file_path.resolve()}.\n")
     _save_drag_and_drop_me_script(deploy_root_path / "dragAndDropMe.py")
+
+def generate_release_mod_file(dest_dir: Path):
+    """Write the release .mod file to dest_dir/<project_slug>.mod."""
+    dest_dir = Path(dest_dir)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    mod_file_path = dest_dir / f"{DEFINITIONS['project_slug']}.mod"
+    with open(mod_file_path, "w") as mod_file:
+        mod_file.writelines(_generate_release_mod())
+    sys.stdout.write(f"Generated .mod file at {mod_file_path.resolve()}.\n")
+
 
 def _generate_release_mod():
     """Generate the content for the .mod file.
@@ -229,6 +237,8 @@ def _generate_release_mod():
         for maya_version in deploy_versions:
             yield f"+ MAYAVERSION:{maya_version} PLATFORM:{_scode} {DEFINITIONS['project_slug']} {VERSION} {DEFINITIONS['project_slug']}\n"
             yield f"MAYA_PLUG_IN_PATH +:= plugins\\{_platform}-{maya_version}\n"
+            yield f"MAYA_PLUG_IN_PATH +:= plugins\\python\n"
+            yield f"PYTHONPATH +:= tools\n"
             yield "\n"
 
 def _generate_dev_mod():
@@ -245,7 +255,8 @@ def _generate_dev_mod():
         for maya_version in deploy_versions:
             yield f"+ MAYAVERSION:{maya_version} PLATFORM:{_scode} {DEFINITIONS['project_slug']} {VERSION} {REPO_ROOT.as_posix()}\n"
             yield f"MAYA_PLUG_IN_PATH +:= _dev_deploy/plugins/{_platform}-{maya_version}\n"
-            yield f"PYTHONPATH +:= src/scripts\n"
+            yield f"MAYA_PLUG_IN_PATH +:= _dev_deploy/plugins/python\n"
+            yield f"PYTHONPATH +:= src/tools\n"
             yield "\n"
 
 def _save_drag_and_drop_me_script(path_to_save):
@@ -329,6 +340,7 @@ if __name__ == "__main__":
                         default=argparse.SUPPRESS,
                         help="Build and test deploy the plugin for given Maya version. If no value is provided (just `--dev`), it will be parsed as None; if a version is provided, it will be parsed as that string.")
     parser.add_argument("--release", action="store_true", help="Prepare the release package.")
+    parser.add_argument("--generate-release-mod", type=str, metavar="DEST_DIR", help="Generate the release .mod file into the given directory.")
 
     args = parser.parse_args()
 
@@ -343,6 +355,9 @@ if __name__ == "__main__":
 
     if args.release:
         release()
+
+    if args.generate_release_mod:
+        generate_release_mod_file(Path(args.generate_release_mod))
 
     if hasattr(args, "dev"):
         dev_deploy(args.dev)

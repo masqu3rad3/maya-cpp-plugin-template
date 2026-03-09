@@ -1,7 +1,7 @@
 {
   "author_name": "",
   "project_name": "",
-  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}",
+  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '-') }}",
   "project_version": "0.1.0",
   "project_description": "My Amazing Maya Plugin",
   "plugin_names": "pluginA, pluginB",

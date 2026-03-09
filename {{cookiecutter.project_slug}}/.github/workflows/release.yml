@@ -46,11 +46,16 @@ jobs:
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
+      - name: Collect plugins
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts
+          Get-ChildItem -Path build -Recurse -Filter "*.mll" | Copy-Item -Destination artifacts/
+
       - name: Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-${{matrix.maya}}
-          path: build/${{env.BUILD_TYPE}}/{% endraw %}{{ cookiecutter.project_slug }}{% raw %}.mll
+          path: artifacts/*.mll
 
   # -----
   # Linux
@@ -77,7 +82,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y gcc-9 g++-9
-          
+
           # Set GCC 9 as default
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 90
@@ -100,11 +105,16 @@ jobs:
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
+      - name: Collect plugins
+        run: |
+          mkdir -p artifacts
+          find build -name "*.so" -exec cp {} artifacts/ \;
+
       - name: Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-gcc9-${{matrix.maya}}
-          path: build/${{env.BUILD_TYPE}}/{% endraw %}{{ cookiecutter.project_slug }}{% raw %}.so
+          path: artifacts/*.so
 
 # --- LATEST Linux builds (default toolchain) ---
   maya-linux-latest:
@@ -139,14 +149,16 @@ jobs:
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DMAYA_VERSION=${{matrix.maya}} -DMAYA_DEVKIT_ROOT="$PWD/devkitBase"
 
-      - name: Build
-        run: cmake --build build --config ${{env.BUILD_TYPE}}
+      - name: Collect plugins
+        run: |
+          mkdir -p artifacts
+          find build -name "*.so" -exec cp {} artifacts/ \;
 
       - name: Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-${{matrix.maya}}
-          path: build/${{env.BUILD_TYPE}}/{% endraw %}{{ cookiecutter.project_slug }}{% raw %}.so
+          path: artifacts/*.so
 
 
 # --------
@@ -184,11 +196,18 @@ jobs:
         with:
           path: modules/{% endraw %}{{ cookiecutter.project_slug }}/plugins
 
-      - name: Copy scripts to modules/scripts
+      - name: Copy tools to modules/tools
         run: |
-          mkdir -p modules/{{ cookiecutter.project_slug }}/scripts
-          cp -r src/scripts/* modules/{{ cookiecutter.project_slug }}/scripts/
+          mkdir -p modules/{{ cookiecutter.project_slug }}/tools
+          cp -r src/tools/* modules/{{ cookiecutter.project_slug }}/tools/
           cp VERSION modules/{{ cookiecutter.project_slug }}/
+
+      - name: Copy python plugins to modules/plugins/python
+        run: |
+          if [ -d "src/plugins/python" ]; then
+            mkdir -p modules/{{ cookiecutter.project_slug }}/plugins/python
+            cp -r src/plugins/python/* modules/{{ cookiecutter.project_slug }}/plugins/python/
+          fi
 
       # --------------------------
       # Build Sphinx Documentation

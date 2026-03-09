@@ -40,7 +40,7 @@ DEFINITIONS_TEMPLATE = {
     "2026"
   ],
   "project_slug": "{{ cookiecutter.project_slug }}",
-  "project_name": "{{ cookiecutter.project_name }}"
+  "project_name": "{{ cookiecutter.project_name }}",
 }
 
 PROJECT_PATH = Path.cwd()

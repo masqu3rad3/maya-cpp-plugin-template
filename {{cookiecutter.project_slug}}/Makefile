@@ -146,3 +146,10 @@ endif
 .PHONY: release
 release: ## Release build via package script
 	python package/package.py --release
+
+.PHONY: add-plugin
+add-plugin: ## Add a new C++ plugin to the project (requires PLUGIN_NAME)
+ifndef PLUGIN_NAME
+	$(error ERROR: PLUGIN_NAME is required. Usage: make add-plugin PLUGIN_NAME=myPlugin)
+endif
+	python package/package.py --add-plugin $(PLUGIN_NAME)

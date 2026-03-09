@@ -12,7 +12,7 @@ def add_plugin(plugin_name, main_cmake_file_path, plugin_template_path, src_fold
     plugin folder from the plugin template."""
 
     print_msg("Adding plugin to the project...")
-    dest_plugin_path = src_folder / plugin_name
+    dest_plugin_path = src_folder / "plugins" / "cpp" / plugin_name
     if dest_plugin_path.is_dir():
         print_msg(f"Plugin folder {dest_plugin_path} already exists. Skipping plugin folder creation.")
     else:
@@ -28,7 +28,7 @@ def add_plugin(plugin_name, main_cmake_file_path, plugin_template_path, src_fold
 
     injector = Injector(main_cmake_file_path)
     injector.match_mode = "contains"
-    injector.inject_after([f"add_subdirectory(src/{plugin_name})\n"], "# Plugin Subdirectories")
+    injector.inject_after([f"add_subdirectory(src/plugins/cpp/{plugin_name})\n"], "# Plugin Subdirectories")
 
 def _generate_devkit_content(platform, definitions_data):
     """Get the content to inject for the given platform."""
