@@ -1,0 +1,1 @@
+This directory contains the tools for the project, including scripts, utilities and API hooks.

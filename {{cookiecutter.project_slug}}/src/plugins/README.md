@@ -1,0 +1,1 @@
+This directory contains the plugins for the project. C++ and Python plugins should be organized in separate subdirectories. Each plugin should have its own README.md with specific details about its functionality, usage, and any special instructions for building or running it.
