@@ -15,7 +15,7 @@ import inject_utils
 
 LOG = logging.getLogger(__name__)
 
-PACKAGE_ROOT = Path(__file__).parent
+PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parent
 ROOT_CMAKELISTS = REPO_ROOT / "CMakeLists.txt"
 
@@ -155,7 +155,14 @@ def dev_deploy(version=None):
         sys.stdout.write(f"Copied python plugins to dev deploy folder.\n")
 
     # Maya Modules injections
-    user_maya_folder = Path(_get_home_dir()) / "Documents" / "maya"
+    if OS == "windows":
+        user_maya_folder = Path(_get_home_dir()) / "Documents" / "maya"
+    elif OS == "linux":
+        user_maya_folder = Path(_get_home_dir()) / "maya"
+    elif OS == "macos":
+        user_maya_folder = Path(_get_home_dir()) / "Library" / "Preferences" / "Autodesk" / "maya"
+    else:
+        raise ValueError(f"Unknown OS: {OS}")
     if not user_maya_folder.exists():
         raise ValueError("No Maya version can be found in the user's documents directory")
     modules_file_path = user_maya_folder / "modules" / f"{DEFINITIONS['project_slug']}_dev.mod"
