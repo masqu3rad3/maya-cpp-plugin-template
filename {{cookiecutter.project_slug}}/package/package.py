@@ -195,14 +195,14 @@ def release(version=None):
             shutil.copy(item, plugin_path / item.name)
             sys.stdout.write(f"Copied {item.name} to deploy folder.\n")
 
-    # if there is a tools folder under the src, copy it under the deploy_path
-    src_tools_path = REPO_ROOT / "src" / "tools"
-    if src_tools_path.exists():
-        deploy_tools_path = deploy_path / "tools"
-        if deploy_tools_path.exists():
-            shutil.rmtree(deploy_tools_path.as_posix())
-        shutil.copytree(src_tools_path, deploy_tools_path)
-        sys.stdout.write(f"Copied tools to deploy folder.\n")
+    # if there is a python folder under the src, copy it under the deploy_path
+    src_python_path = REPO_ROOT / "src" / "python"
+    if src_python_path.exists():
+        deploy_python_path = deploy_path / "python"
+        if deploy_python_path.exists():
+            shutil.rmtree(deploy_python_path.as_posix())
+        shutil.copytree(src_python_path, deploy_python_path)
+        sys.stdout.write(f"Copied python to deploy folder.\n")
 
     # Copy python plugins (flattened - all .py files in same folder)
     src_python_plugins_path = REPO_ROOT / "src" / "plugins" / "python"
@@ -245,7 +245,7 @@ def _generate_release_mod():
             yield f"+ MAYAVERSION:{maya_version} PLATFORM:{_scode} {DEFINITIONS['project_slug']} {VERSION} {DEFINITIONS['project_slug']}\n"
             yield f"MAYA_PLUG_IN_PATH +:= plugins\\{_platform}-{maya_version}\n"
             yield f"MAYA_PLUG_IN_PATH +:= plugins\\python\n"
-            yield f"PYTHONPATH +:= tools\n"
+            yield f"PYTHONPATH +:= python\n"
             yield "\n"
 
 def _generate_dev_mod():
@@ -263,7 +263,7 @@ def _generate_dev_mod():
             yield f"+ MAYAVERSION:{maya_version} PLATFORM:{_scode} {DEFINITIONS['project_slug']} {VERSION} {REPO_ROOT.as_posix()}\n"
             yield f"MAYA_PLUG_IN_PATH +:= _dev_deploy/plugins/{_platform}-{maya_version}\n"
             yield f"MAYA_PLUG_IN_PATH +:= _dev_deploy/plugins/python\n"
-            yield f"PYTHONPATH +:= src/tools\n"
+            yield f"PYTHONPATH +:= src/python\n"
             yield "\n"
 
 def _save_drag_and_drop_me_script(path_to_save):

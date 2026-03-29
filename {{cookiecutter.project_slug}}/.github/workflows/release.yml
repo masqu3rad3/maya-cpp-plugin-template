@@ -196,10 +196,10 @@ jobs:
         with:
           path: modules/{% endraw %}{{ cookiecutter.project_slug }}/plugins
 
-      - name: Copy tools to modules/tools
+      - name: Copy python to modules/python
         run: |
-          mkdir -p modules/{{ cookiecutter.project_slug }}/tools
-          cp -r src/tools/* modules/{{ cookiecutter.project_slug }}/tools/
+          mkdir -p modules/{{ cookiecutter.project_slug }}/python
+          cp -r src/python/* modules/{{ cookiecutter.project_slug }}/python/
           cp VERSION modules/{{ cookiecutter.project_slug }}/
 
       - name: Copy python plugins to modules/plugins/python
