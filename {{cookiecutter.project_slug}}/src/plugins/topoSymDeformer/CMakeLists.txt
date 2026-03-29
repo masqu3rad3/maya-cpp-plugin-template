@@ -6,7 +6,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Plugin name
-set(PROJECT_NAME --BLUEPRINT--PLUGIN_NAME-- )
+set(PROJECT_NAME topoSymDeformer)
 project(${PROJECT_NAME})
 
 # Optional Maya version from CLI
@@ -37,12 +37,12 @@ endif()
 file(GLOB_RECURSE SOURCES "*.cpp")
 file(GLOB_RECURSE HEADERS "*.h")
 
-find_package(OpenGL REQUIRED)
-
-# OpenCL – required by any plugin that implements MPxGPUDeformer.
-# Maya supplies its own context/device/queue, but headers + import lib are
-# still needed at compile/link time.
+# OpenCL is required for the GPU deformer path.
+# Maya provides its own OpenCL context/device/queue via MOpenCLInfo, but we
+# still need the OpenCL headers and import library to compile and link.
 find_package(OpenCL REQUIRED)
+
+find_package(OpenGL REQUIRED)
 
 # Build plugin
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
@@ -53,12 +53,11 @@ target_link_libraries(${PROJECT_NAME}
     OpenMayaRender      # needed for MRenderUtil::sampleShadingNetwork
     OpenMayaUI          # needed for M3dView::active3dView
     Foundation
-	OpenMayaAnim
+    OpenMayaAnim
     OpenMayaFX
-    Foundation
-    OpenGL::GL    # Modern cross-platform way to link OpenGL
-    OpenGL::GLU   # Modern cross-platform way to link GLU
-    OpenCL::OpenCL  # Required for GPU deformer (MPxGPUDeformer) implementations
+    OpenGL::GL          # Modern cross-platform way to link OpenGL
+    OpenGL::GLU         # Modern cross-platform way to link GLU
+    OpenCL::OpenCL      # Required for GPU deformer path
 )
 
 # Output settings
