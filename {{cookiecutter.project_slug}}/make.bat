@@ -1,6 +1,28 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem --- Parse args: extract plugin=NAME and a positional version (first non-plugin token) ---
+rem Skips the first token (the command name itself) so the dispatch on %1 stays the source of truth.
+rem cmd splits "plugin=NAME" on '=' into two tokens ("plugin" and "NAME"), so the state machine
+rem uses the literal token "plugin" to switch into "expect the value next" mode.
+set "PLUGIN_NAME="
+set "VERSION_ARG="
+set "_FIRST=1"
+set "_EXPECT_PLUGIN_VALUE="
+for %%P in (%*) do (
+    set "tok=%%~P"
+    if "!_FIRST!"=="1" (
+        set "_FIRST=0"
+    ) else if defined _EXPECT_PLUGIN_VALUE (
+        set "_EXPECT_PLUGIN_VALUE="
+        set "PLUGIN_NAME=!tok!"
+    ) else if /i "!tok!"=="plugin" (
+        set "_EXPECT_PLUGIN_VALUE=1"
+    ) else (
+        if not defined VERSION_ARG set "VERSION_ARG=!tok!"
+    )
+)
+
 if "%1"=="" goto help
 
 if "%1"=="help" goto help
@@ -22,8 +44,10 @@ if "%1"=="add-plugin" goto add_plugin
 
 echo Unknown command: %1
 echo Run: make help
-echo   build <VERSION>        Debug build via CMake
-echo   dev <VERSION>          Debug build via CMake with development settings
+echo   dev <VERSION>            Dev build (optional version)
+echo   dev [VERSION] [plugin=NAME]    Dev build (and deploy) - optionally filtered to one plugin
+echo   build <VERSION>        Build debug for specific Maya version
+echo   build VERSION [plugin=NAME]    Build (no deploy) - optionally filtered to one plugin
 echo   add-plugin <NAME>      Add a new C++ plugin to the project
 
 exit /b 1
@@ -31,9 +55,13 @@ exit /b 1
 :help
 echo.
 echo Available commands:
-echo   build <VERSION>             Debug build via CMake
-echo   dev <VERSION>               Debug build via CMake with development settings
-echo   release <VERSION>           Release build via CMake
+echo   dev                        Dev build (builds all Maya versions)
+echo   dev <VERSION>               Dev build for specific Maya version
+echo   dev [VERSION] [plugin=NAME] Dev build (and deploy) - optionally filtered to one plugin
+echo   build <VERSION>            Build debug for specific Maya version
+echo   build VERSION [plugin=NAME] Build debug (no deploy) - optionally filtered to one plugin
+echo   plugin=NAME is optional. When set, only the named C++ plugin is built.
+echo   release                     Release build
 echo   add-plugin <NAME>           Add a new C++ plugin to the project
 echo   docs                        Build documentation
 echo   doctor                      Check environment setup
@@ -88,13 +116,20 @@ mayapy -m coverage run tests\integration\invoke.py
 exit /b 0
 
 :build
-if "%2"=="" goto missing_version
-
-python package/package.py --build %2
+if "!VERSION_ARG!"=="" goto missing_version
+if "!PLUGIN_NAME!"=="" (
+    python package\package.py --build !VERSION_ARG!
+) else (
+    python package\package.py --build !VERSION_ARG! --plugin !PLUGIN_NAME!
+)
 exit /b 0
 
 :dev
-python package/package.py --dev %2
+if "!PLUGIN_NAME!"=="" (
+    python package\package.py --dev !VERSION_ARG!
+) else (
+    python package\package.py --dev !VERSION_ARG! --plugin !PLUGIN_NAME!
+)
 exit /b 0
 
 :release
@@ -106,8 +141,12 @@ exit /b 0
 echo.
 echo ERROR: VERSION is required.
 echo Usage:
-echo   make.bat build 2026
-echo   make.bat release 2026
+echo   make.bat dev 2024
+echo   make.bat dev -v 2024
+echo   make.bat dev --version 2024
+echo   make.bat build 2024
+echo   make.bat build -v 2024
+echo   make.bat build --version 2024
 exit /b 1
 
 :add_plugin

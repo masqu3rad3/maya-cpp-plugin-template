@@ -11,6 +11,17 @@ TESTS_DIR := tests
 # Python executable (Maya)
 MAYAPY ?= mayapy
 
+# Virtual environment
+VENV_DIR := venv
+ifeq ($(PLATFORM),windows)
+    VENV_PYTHON := $(VENV_DIR)/Scripts/python
+else
+    VENV_PYTHON := $(VENV_DIR)/bin/python
+endif
+
+# Python executable - use venv python if available, otherwise system python
+PYTHON := $(if $(wildcard $(VENV_PYTHON)),$(VENV_PYTHON),python)
+
 # --------------------------------------------------
 # Platform detection
 # --------------------------------------------------
@@ -130,26 +141,23 @@ endif
 # --------------------------------------------------
 
 .PHONY: build
-build: ## Build Debug using package script (requires VERSION)
+build: ## Build Debug using package script (requires VERSION) - optionally filtered to one plugin (plugin=NAME)
 ifndef VERSION
-	$(error ERROR: VERSION is required. Usage: make build VERSION=2026)
+	$(error ERROR: VERSION is required. Usage: make build VERSION=2024)
 endif
-	python package/package.py --build $(VERSION)
+	$(PYTHON) package/package.py --build $(VERSION) $(if $(plugin),--plugin $(plugin),)
 
 .PHONY: dev
-dev: ## Dev build via package script (requires VERSION)
-ifndef VERSION
-	$(error ERROR: VERSION is required. Usage: make dev VERSION=2026)
-endif
-	python package/package.py --dev $(VERSION)
+dev: ## Dev build via package script (VERSION optional - builds all if not specified) - optionally filtered to one plugin (plugin=NAME)
+	$(PYTHON) package/package.py --dev $(VERSION) $(if $(plugin),--plugin $(plugin),)
 
 .PHONY: release
 release: ## Release build via package script
-	python package/package.py --release
+	$(PYTHON) package/package.py --release
 
 .PHONY: add-plugin
 add-plugin: ## Add a new C++ plugin to the project (requires PLUGIN_NAME)
 ifndef PLUGIN_NAME
 	$(error ERROR: PLUGIN_NAME is required. Usage: make add-plugin PLUGIN_NAME=myPlugin)
 endif
-	python package/package.py --add-plugin $(PLUGIN_NAME)
+	$(PYTHON) package/package.py --add-plugin $(PLUGIN_NAME)

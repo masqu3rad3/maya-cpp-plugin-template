@@ -32,6 +32,16 @@ with open(VERSION_FILE.as_posix(), 'r') as version_file:
 
 OS = platform.system().lower()
 
+def _validate_plugin_name(name):
+    if name is None:
+        return
+    cpp_plugins_dir = REPO_ROOT / "src" / "plugins" / "cpp"
+    available = {p.name for p in cpp_plugins_dir.iterdir() if p.is_dir()}
+    if name not in available:
+        raise SystemExit(
+            f"Unknown plugin '{name}'. Available C++ plugins: {', '.join(sorted(available))}"
+        )
+
 def add_plugin_to_cmakelists(plugin_name: str):
     """Add a subdirectory to the root CMakeLists.txt."""
     inject_utils.add_plugin(plugin_name, ROOT_CMAKELISTS, BLUEPRINT_PATH, REPO_ROOT / "src")
@@ -101,8 +111,9 @@ def validate_local_devkits(maya_version=None):
         else:
             sys.stdout.write(f"Devkit for Maya {version} found at {devkit_path.resolve()}.\n")
 
-def build_plugins(maya_version, build_type="Debug", continue_on_error=False):
+def build_plugins(maya_version, build_type="Debug", continue_on_error=False, plugin_filter=None):
     """Build the plugins using CMake."""
+    _validate_plugin_name(plugin_filter)
     build_dir = REPO_ROOT / "build"
     # return build_dir
     # delete the build directory if it exists
@@ -110,7 +121,10 @@ def build_plugins(maya_version, build_type="Debug", continue_on_error=False):
         shutil.rmtree(build_dir.as_posix())
     try:
         subprocess.check_call(["cmake", "-S", str(REPO_ROOT), "-B", str(build_dir), f"-DCMAKE_BUILD_TYPE={build_type}", f"-DMAYA_VERSION={maya_version}"])
-        subprocess.check_call(["cmake", "--build", str(build_dir), "--config", build_type])
+        build_cmd = ["cmake", "--build", str(build_dir), "--config", build_type]
+        if plugin_filter:
+            build_cmd.extend(["--target", plugin_filter])
+        subprocess.check_call(build_cmd)
         sys.stdout.write("Plugins built successfully.\n")
         return build_dir
     except subprocess.CalledProcessError as e:
@@ -119,7 +133,7 @@ def build_plugins(maya_version, build_type="Debug", continue_on_error=False):
         else:
             raise RuntimeError(f"Failed to build plugins. Error: {e}") from e
 
-def dev_deploy(version=None):
+def dev_deploy(version=None, plugin_filter=None):
     """Deploy the plugin(s) for a specific Maya version. Or if version is None, deploy for all target versions."""
     validate_local_devkits()
     extensions = {
@@ -132,9 +146,15 @@ def dev_deploy(version=None):
     plugins_path.mkdir(parents=True, exist_ok=True)
     deploy_versions = [version] if version else DEFINITIONS["target_maya_versions"]
     for maya_version in deploy_versions:
-        build_dir = build_plugins(maya_version, build_type="Release")
+        build_dir = build_plugins(maya_version, build_type="Release", plugin_filter=plugin_filter)
         plugin_path = plugins_path / f"{OS}-{maya_version}"
         plugin_path.mkdir(exist_ok=True)
+        # When filtering, remove the targeted plugin's previous binary from the
+        # deploy folder so we don't leave stale .mll/.so/.bundle from a prior full build.
+        if plugin_filter:
+            stale = plugin_path / f"{plugin_filter}{extensions[OS]}"
+            if stale.exists():
+                stale.unlink()
         # collect the built plugins and copy to the deploy folder
         collected_plugins = build_dir.rglob(f"*{extensions[OS]}")
         for item in collected_plugins:
@@ -343,6 +363,8 @@ if __name__ == "__main__":
     parser.add_argument("--add-plugin", type=str, help="Add a plugin to CMakeLists.txt")
     parser.add_argument("--validate-local-devkits", action="store_true", help="Validate local devkits. If no version is specified, it will attempt to download from the definitions.json.")
     parser.add_argument("--build", type=str, help="Build the plugin for given Maya version.")
+    parser.add_argument("--plugin", type=str, default=None,
+                        help="Optional: build/deploy only this single C++ plugin (must match a folder under src/plugins/cpp/).")
     parser.add_argument("--dev", nargs='?', const=None, type=str,
                         default=argparse.SUPPRESS,
                         help="Build and test deploy the plugin for given Maya version. If no value is provided (just `--dev`), it will be parsed as None; if a version is provided, it will be parsed as that string.")
@@ -358,7 +380,7 @@ if __name__ == "__main__":
         validate_local_devkits()
 
     if args.build:
-        build_plugins(args.build)
+        build_plugins(args.build, plugin_filter=args.plugin)
 
     if args.release:
         release()
@@ -367,5 +389,5 @@ if __name__ == "__main__":
         generate_release_mod_file(Path(args.generate_release_mod))
 
     if hasattr(args, "dev"):
-        dev_deploy(args.dev)
+        dev_deploy(args.dev, plugin_filter=args.plugin)
 

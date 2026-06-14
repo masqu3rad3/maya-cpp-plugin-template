@@ -13,7 +13,25 @@ on:
     branches: [ "main", "dev" ]
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check_tests.outputs.exists }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Check for unit tests
+        id: check_tests
+        run: |
+          if ls tests/unit/test_*.py tests/unit/*_test.py 1> /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
   maya:
+    needs: check
+    if: needs.check.outputs.exists == 'true'
     runs-on: ubuntu-latest
 
     strategy:
