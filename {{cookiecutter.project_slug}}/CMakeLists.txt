@@ -8,3 +8,4 @@ if(NOT DEFINED MAYA_DEVKIT_ROOT)
 endif()
 
 # Plugin Subdirectories
+add_subdirectory(src/plugins/topoSymDeformer)

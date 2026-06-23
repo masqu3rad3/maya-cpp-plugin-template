@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la:*)",
+      "Bash(./make:*)",
+      "Bash(cmd.exe /c:*)",
+      "Bash(bash -c:*)",
+      "Bash(/d/dev/d-creature-kit/make.bat:*)",
+      "Bash(cmake:*)",
+      "Bash(echo:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}
